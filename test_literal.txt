@@ -1,0 +1,5 @@
+Testing literal single-quote here-string!
+$variable_is_not_expanded
+"quotes_are_preserved"
+%percent_is_safe%
+<bracket_is_safe>

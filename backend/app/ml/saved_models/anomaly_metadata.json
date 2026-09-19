@@ -1,0 +1,14 @@
+{
+  "model_name": "Isolation Forest Anomaly Detector",
+  "model_version": "v1.0.0",
+  "features": [
+    "energy_kwh",
+    "co2_kg",
+    "production_units",
+    "emission_intensity",
+    "renewable_share"
+  ],
+  "contamination": 0.035,
+  "trained_at": "2026-09-18T13:51:53.500330",
+  "disclaimer": "Identifies potential anomalies requiring investigation. Does not diagnose machine failures without physical telemetry."
+}
