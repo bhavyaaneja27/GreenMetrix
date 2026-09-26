@@ -17,6 +17,18 @@ def _match(msg: str, keywords: List[str]) -> bool:
     return any(k in msg for k in keywords)
 
 
+DOMAIN_KEYWORDS = [
+    "okhla", "faridabad", "gurgaon", "noida", "delhi", "ncr", "factory", "factories", "plant", "facility", "facilities", "assembly", "unit", "units",
+    "emission", "emissions", "co2", "carbon", "greenhouse", "ghg", "scope 1", "scope 2", "scope 3", "intensity", "footprint", "decarboni", "net zero",
+    "energy", "power", "electricity", "kwh", "mwh", "kw", "spike", "load", "surge", "consumption", "meter", "metering", "telemetry", "iot", "sensor", "vfd", "hvac", "furnace", "boiler", "tariff", "grid", "demand",
+    "solar", "renewable", "pv", "wind", "clean energy", "green tariff", "sustainability", "rating", "score", "esg", "benchmark", "audit", "compliance", "governance",
+    "iso", "50001", "cea", "bee", "pat", "protocol", "baseline", "enpi", "seu",
+    "anomaly", "anomalies", "isolation forest", "digital twin", "twin", "what-if", "what if", "simulate", "simulation", "scenario", "predict", "forecasting", "greenmetrix"
+]
+
+GREETING_KEYWORDS = ["hello", "hi", "hey", "help", "who are you", "what can you do", "what is this", "options", "features", "capabilities"]
+
+
 class GreenMetriXCopilotAgent:
 
     def process_query(self, message: str, factory_id: Optional[int], db: Session) -> Dict[str, Any]:
@@ -29,6 +41,58 @@ class GreenMetriXCopilotAgent:
         data_quality = "Verified (Factory Metered Telemetry)"
 
         logger.info("Copilot received question: %s", message)
+
+        # ------------------------------------------------------------------
+        # Onboarding / Greetings
+        # ------------------------------------------------------------------
+        if any(k in msg_lower for k in GREETING_KEYWORDS) and len(msg_lower.split()) <= 5:
+            return {
+                "answer": (
+                    "Hello! I am GreenMetriX AI Sustainability Copilot, your autonomous manufacturing sustainability partner. "
+                    "I monitor 8 Delhi NCR facilities, CEA grid emission factors, and ISO 50001 standards.\n\n"
+                    "Here are sample questions you can ask me:\n"
+                    "1. 'What is the current emission intensity of the Okhla assembly facility?'\n"
+                    "2. 'Why did Faridabad facility flag an energy spike at 14:00 yesterday?'\n"
+                    "3. 'Simulate 40% rooftop solar adoption across all Delhi NCR plants.'\n"
+                    "4. 'What does ISO 50001 specify regarding industrial baseline recalculation?'"
+                ),
+                "insights": ["AI Copilot is active and monitoring 8 regional facilities."],
+                "recommendations": ["Select a starter prompt or type a facility-specific sustainability question."],
+                "sources": ["GreenMetriX Platform Capabilities"],
+                "assumptions": [],
+                "data_quality": "Verified",
+                "tool_calls": []
+            }
+
+        # ------------------------------------------------------------------
+        # Domain Scope Guard — reject off-topic random queries
+        # ------------------------------------------------------------------
+        has_domain_keyword = any(k in msg_lower for k in DOMAIN_KEYWORDS)
+        if not has_domain_keyword:
+            logger.info("Query rejected by domain scope guard: %s", message)
+            return {
+                "answer": (
+                    f"I am GreenMetriX AI Sustainability Copilot, specialized exclusively in manufacturing decarbonization, "
+                    f"industrial energy telemetry, CO₂ emission tracking, and ISO 50001 compliance.\n\n"
+                    f"Your question (\"{message}\") appears to be outside my scope of industrial sustainability intelligence.\n\n"
+                    f"Please ask a question related to:\n"
+                    f"• Factory emission intensity & energy consumption (e.g., Okhla, Faridabad)\n"
+                    f"• Anomaly detection & peak load energy spikes\n"
+                    f"• What-if solar adoption & energy efficiency simulations\n"
+                    f"• ISO 50001 compliance & CEA grid emission factors"
+                ),
+                "insights": [
+                    "Query categorized as out-of-domain.",
+                    "Domain Scope Enforced: Manufacturing Energy & Sustainability Intelligence."
+                ],
+                "recommendations": [
+                    "Rephrase your prompt to focus on facility telemetry, emissions, anomalies, or decarbonization roadmaps."
+                ],
+                "sources": ["GreenMetriX Copilot Scope Policy"],
+                "assumptions": [],
+                "data_quality": "N/A (Off-topic query)",
+                "tool_calls": []
+            }
 
         # ------------------------------------------------------------------
         # Resolve factory context

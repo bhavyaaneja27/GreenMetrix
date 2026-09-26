@@ -222,7 +222,64 @@ export const adminApi = {
 };
 
 function generateClientSideCopilotResponse(message: string, factoryId?: number): ChatResponse {
-  const msgLower = message.toLowerCase();
+  const msgLower = message.toLowerCase().trim();
+
+  const DOMAIN_KEYWORDS = [
+    "okhla", "faridabad", "gurgaon", "noida", "delhi", "ncr", "factory", "factories", "plant", "facility", "facilities", "assembly", "unit", "units",
+    "emission", "emissions", "co2", "carbon", "greenhouse", "ghg", "scope 1", "scope 2", "scope 3", "intensity", "footprint", "decarboni", "net zero",
+    "energy", "power", "electricity", "kwh", "mwh", "kw", "spike", "load", "surge", "consumption", "meter", "metering", "telemetry", "iot", "sensor", "vfd", "hvac", "furnace", "boiler", "tariff", "grid", "demand",
+    "solar", "renewable", "pv", "wind", "clean energy", "green tariff", "sustainability", "rating", "score", "esg", "benchmark", "audit", "compliance", "governance",
+    "iso", "50001", "cea", "bee", "pat", "protocol", "baseline", "enpi", "seu",
+    "anomaly", "anomalies", "isolation forest", "digital twin", "twin", "what-if", "what if", "simulate", "simulation", "scenario", "predict", "forecasting", "greenmetrix"
+  ];
+
+  const GREETING_KEYWORDS = ["hello", "hi", "hey", "help", "who are you", "what can you do", "what is this", "options", "features", "capabilities"];
+
+  // 0a. Greetings / Onboarding
+  if (GREETING_KEYWORDS.some(k => msgLower.includes(k)) && msgLower.split(/\s+/).length <= 5) {
+    return {
+      answer: "Hello! I am GreenMetriX AI Sustainability Copilot, your autonomous manufacturing sustainability partner. " +
+              "I monitor 8 Delhi NCR facilities, CEA grid emission factors, and ISO 50001 energy standards.\n\n" +
+              "Here are sample questions you can ask me:\n" +
+              "1. 'What is the current emission intensity of the Okhla assembly facility?'\n" +
+              "2. 'Why did Faridabad facility flag an energy spike at 14:00 yesterday?'\n" +
+              "3. 'Simulate 40% rooftop solar adoption across all Delhi NCR plants.'\n" +
+              "4. 'What does ISO 50001 specify regarding industrial baseline recalculation?'",
+      insights: ["AI Copilot is active and monitoring 8 regional facilities."],
+      recommendations: ["Select a starter prompt or type a facility-specific sustainability question."],
+      sources: ["GreenMetriX Platform Capabilities"],
+      assumptions: [],
+      data_quality: "Verified",
+      tool_calls: []
+    };
+  }
+
+  // 0b. Domain Scope Guard — reject off-topic random queries (e.g. "banana shake")
+  const hasDomainKeyword = DOMAIN_KEYWORDS.some(k => msgLower.includes(k));
+  if (!hasDomainKeyword) {
+    return {
+      answer: `I am GreenMetriX AI Sustainability Copilot, specialized exclusively in manufacturing decarbonization, industrial energy telemetry, CO₂ emission tracking, and ISO 50001 compliance.\n\n` +
+              `Your question ("${message}") appears to be outside my scope of industrial sustainability intelligence.\n\n` +
+              `Please ask a question related to:\n` +
+              `• Factory emission intensity & energy consumption (e.g. Okhla, Faridabad)\n` +
+              `• Anomaly detection & peak load energy spikes\n` +
+              `• What-if solar adoption & energy efficiency simulations\n` +
+              `• ISO 50001 compliance & CEA grid emission factors`,
+      insights: [
+        "Query categorized as out-of-domain.",
+        "Domain Scope Enforced: Industrial Energy & Sustainability Intelligence."
+      ],
+      recommendations: [
+        "Rephrase your prompt to focus on facility telemetry, emissions, anomalies, or decarbonization roadmaps."
+      ],
+      sources: [
+        "GreenMetriX Copilot Scope Policy"
+      ],
+      assumptions: [],
+      data_quality: "N/A (Off-topic query)",
+      tool_calls: []
+    };
+  }
 
   // 1. Okhla / Emission Intensity Query
   if (msgLower.includes("okhla") || (msgLower.includes("emission intensity") && !msgLower.includes("iso"))) {
