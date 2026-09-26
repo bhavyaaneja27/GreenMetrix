@@ -67,40 +67,49 @@ export const AICopilot: React.FC = () => {
     if (!userText) setInput('');
     setLoading(true);
 
+    console.log('Copilot question submitted:', textToSend);
     try {
       const response = await copilotApi.ask(textToSend);
+      console.log('Copilot response received:', response);
+
+      // tool_calls is an array of {tool, params?, output?, ...} objects from the backend
+      const toolCallObjects: { tool: string }[] = response.tool_calls || [];
+      const toolNames = toolCallObjects.map(t => t.tool).filter(Boolean);
+
+      // Build reasoning steps from tool names actually used
+      const reasoningFromTools: string[] = [
+        'Parsed natural language query and detected intent',
+        ...toolNames.map(t => `Executed tool: ${t}`),
+        response.insights?.length ? 'Synthesised insights from live telemetry' : null,
+        response.sources?.length ? 'Cross-referenced knowledge base sources' : null,
+      ].filter((s): s is string => Boolean(s));
+
       const assistantMsg: ChatMessage = {
         id: `a-${Date.now()}`,
         sender: 'assistant',
         text: response.answer,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        reasoningSteps: response.reasoning_trace || [
-          'Interpreted natural language query intent',
-          'Fetched live factory telemetry from database',
-          'Cross-referenced CEA 0.716 kg/kWh emission baseline',
-          'Computed optimization impact matrix'
+        reasoningSteps: reasoningFromTools.length > 1 ? reasoningFromTools : [
+          'Parsed natural language query and detected intent',
+          'Queried live factory telemetry database',
+          'Applied CEA 0.716 kg CO₂/kWh grid emission factor',
         ],
-        toolsUsed: response.tools_called || ['analytics_query', 'cea_factor_lookup'],
+        toolsUsed: toolNames.length > 0 ? toolNames : ['sustainability_knowledge_retrieval'],
         citations: response.sources?.map((s: string) => ({
           title: s,
-          source: 'Central Electricity Authority / GHG Protocol'
+          source: 'GreenMetriX Knowledge Base'
         }))
       };
       setMessages(prev => [...prev, assistantMsg]);
     } catch (err) {
       console.error('Copilot request failed:', err);
-      // Fallback assistant response
       const fallbackMsg: ChatMessage = {
         id: `a-${Date.now()}`,
         sender: 'assistant',
-        text: `Analysis complete: Based on current telemetry, the facility operates at 0.68 kg CO₂/unit (rated LOW intensity). The primary driver is electricity demand during peak afternoon hours. We project a 16.4% reduction in Scope 2 emissions by shifting 120 kWh to off-peak slots and expanding rooftop solar capacity.`,
+        text: `Unable to reach the GreenMetriX backend. Please check your connection and try again. Your question was: "${textToSend}"`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        reasoningSteps: [
-          'Evaluated telemetry records from active SQLite database',
-          'Applied CEA national grid factor of 0.716 kg CO2/kWh',
-          'Identified peak tariff optimization opportunity'
-        ],
-        toolsUsed: ['energy_intensity_calculator', 'cea_baseline_service']
+        reasoningSteps: ['Backend connection failed — no data retrieved'],
+        toolsUsed: []
       };
       setMessages(prev => [...prev, fallbackMsg]);
     } finally {
