@@ -1,4 +1,4 @@
-import datetime
+﻿import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
@@ -11,7 +11,6 @@ from app.routers import (
     anomalies, copilot, digital_twin, score, reports,
     data_quality, admin
 )
-from app.routers.copilot import copilot_router  # new /api/copilot endpoint
 
 app = FastAPI(
     title="GreenMetriX API",
@@ -46,8 +45,7 @@ app.include_router(map_router.router)
 app.include_router(analytics.router)
 app.include_router(ml.router)
 app.include_router(anomalies.router)
-app.include_router(copilot.router)        # /api/assistant/chat (backward compat)
-app.include_router(copilot_router)         # /api/copilot (new canonical endpoint)
+app.include_router(copilot.router)
 app.include_router(digital_twin.router)
 app.include_router(score.router)
 app.include_router(reports.router)
