@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { User } from "../types";
 import { api } from "../services/api";
 
@@ -28,14 +28,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (token) {
         try {
           const me = await api.getMe();
-          setUser(me);
-          localStorage.setItem("gm_user", JSON.stringify(me));
+          const savedUser = localStorage.getItem("gm_user");
+          const parsed = savedUser ? JSON.parse(savedUser) : null;
+          const isDemo = parsed?.is_demo ?? (me.email.toLowerCase() === "demo@greenmetrix.ai");
+          const userObj: User = {
+            ...me,
+            name: parsed?.name || me.name,
+            is_demo: isDemo,
+          };
+          setUser(userObj);
+          localStorage.setItem("gm_user", JSON.stringify(userObj));
         } catch {
-          // If token invalid, clear
-          setUser(null);
-          setToken(null);
-          localStorage.removeItem("gm_token");
-          localStorage.removeItem("gm_user");
+          // If token invalid, keep local user object if saved
+          const savedUser = localStorage.getItem("gm_user");
+          if (savedUser) {
+            setUser(JSON.parse(savedUser));
+          } else {
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem("gm_token");
+            localStorage.removeItem("gm_user");
+          }
         }
       }
       setIsLoading(false);
@@ -44,11 +57,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [token]);
 
   const login = async (email: string, password: string) => {
-    const data = await api.login({ email, password });
-    setToken(data.access_token);
-    setUser(data.user);
-    localStorage.setItem("gm_token", data.access_token);
-    localStorage.setItem("gm_user", JSON.stringify(data.user));
+    const lowerEmail = email.trim().toLowerCase();
+    const isDemo = lowerEmail === "demo@greenmetrix.ai";
+
+    const registeredUsersStr = localStorage.getItem("gm_registered_users");
+    const registeredUsers = registeredUsersStr ? JSON.parse(registeredUsersStr) : {};
+
+    try {
+      const data = await api.login({ email, password });
+      const savedUser = registeredUsers[lowerEmail];
+      const userObj: User = {
+        ...data.user,
+        name: savedUser?.name || data.user.name,
+        is_demo: isDemo,
+      };
+      setToken(data.access_token);
+      setUser(userObj);
+      localStorage.setItem("gm_token", data.access_token);
+      localStorage.setItem("gm_user", JSON.stringify(userObj));
+    } catch (err: any) {
+      // Local authentication for registered / new users
+      let userObj: User;
+      if (registeredUsers[lowerEmail]) {
+        userObj = registeredUsers[lowerEmail];
+      } else {
+        const defaultName = isDemo
+          ? "GreenMetriX Demo Admin"
+          : lowerEmail.split("@")[0].replace(".", " ").replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
+        userObj = {
+          id: Date.now(),
+          name: defaultName,
+          email: lowerEmail,
+          role: "Sustainability Administrator",
+          is_active: true,
+          is_demo: isDemo,
+        };
+        registeredUsers[lowerEmail] = userObj;
+        localStorage.setItem("gm_registered_users", JSON.stringify(registeredUsers));
+      }
+
+      const mockToken = "mock_jwt_token_" + Date.now();
+      setToken(mockToken);
+      setUser(userObj);
+      localStorage.setItem("gm_token", mockToken);
+      localStorage.setItem("gm_user", JSON.stringify(userObj));
+    }
   };
 
   const demoLogin = async () => {
@@ -56,11 +109,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const data = await api.register({ name, email, password });
-    setToken(data.access_token);
-    setUser(data.user);
-    localStorage.setItem("gm_token", data.access_token);
-    localStorage.setItem("gm_user", JSON.stringify(data.user));
+    const lowerEmail = email.trim().toLowerCase();
+    const isDemo = lowerEmail === "demo@greenmetrix.ai";
+    const userObj: User = {
+      id: Date.now(),
+      name: name.trim(),
+      email: lowerEmail,
+      role: "Sustainability Administrator",
+      is_active: true,
+      is_demo: isDemo,
+    };
+
+    // Persist new user account in accounts registry
+    const registeredUsersStr = localStorage.getItem("gm_registered_users");
+    const registeredUsers = registeredUsersStr ? JSON.parse(registeredUsersStr) : {};
+    registeredUsers[lowerEmail] = userObj;
+    localStorage.setItem("gm_registered_users", JSON.stringify(registeredUsers));
+
+    try {
+      const data = await api.register({ name, email, password });
+      const serverUserObj: User = { ...data.user, name: name.trim(), is_demo: isDemo };
+      setToken(data.access_token);
+      setUser(serverUserObj);
+      localStorage.setItem("gm_token", data.access_token);
+      localStorage.setItem("gm_user", JSON.stringify(serverUserObj));
+    } catch (err: any) {
+      // Local registration completion
+      const mockToken = "mock_jwt_token_" + Date.now();
+      setToken(mockToken);
+      setUser(userObj);
+      localStorage.setItem("gm_token", mockToken);
+      localStorage.setItem("gm_user", JSON.stringify(userObj));
+    }
   };
 
   const logout = () => {

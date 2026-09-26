@@ -6,6 +6,7 @@ export interface User {
   email: string;
   role: string;
   is_active: boolean;
+  is_demo?: boolean;
 }
 
 export interface Factory {
@@ -235,3 +236,21 @@ export interface DataQualityResponse {
   warnings: Array<{ severity: string; field: string; message: string }>;
   calculated_at: string;
 }
+
+export interface DateRange {
+  label: string;
+  startDate: string;
+  endDate: string;
+  preset: string;
+}
+
+export interface DashboardNotification {
+  id: string;
+  title: string;
+  message: string;
+  severity: "HIGH" | "MEDIUM" | "INFO";
+  timestamp: string;
+  read: boolean;
+  link?: string;
+}
+

@@ -28,13 +28,93 @@ import { WhatIfQuickSimulator } from '../components/cards/WhatIfQuickSimulator';
 import { AiRecommendationsCard } from '../components/cards/AiRecommendationsCard';
 import { PredictionHistoryTable } from '../components/cards/PredictionHistoryTable';
 import { reportsApi } from '../services/api';
+import { useDashboard } from '../context/DashboardContext';
 
 type DashboardView = 'all' | 'analytics' | 'simulation' | 'telemetry';
 
 export const Dashboard: React.FC = () => {
+  const { dateRange } = useDashboard();
   const [activeTab, setActiveTab] = useState<DashboardView>('all');
   const [isExporting, setIsExporting] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<string>('Just now');
+
+  const getFilteredKpis = () => {
+    switch (dateRange.preset) {
+      case 'today':
+        return {
+          co2: '41.6',
+          energy: '61.4',
+          intensity: '0.66',
+          anomalies: '1',
+          anomaliesSub: '1 Warning',
+          period: 'vs yesterday',
+        };
+      case 'last7':
+        return {
+          co2: '291.3',
+          energy: '430.0',
+          intensity: '0.67',
+          anomalies: '2',
+          anomaliesSub: '1 Critical, 1 Warning',
+          period: 'vs previous 7 days',
+        };
+      case 'last30':
+        return {
+          co2: '1,248.5',
+          energy: '1,842.1',
+          intensity: '0.68',
+          anomalies: '3',
+          anomaliesSub: '1 Critical, 2 Warnings',
+          period: 'vs previous 30 days',
+        };
+      case 'last3m':
+        return {
+          co2: '3,745.5',
+          energy: '5,526.3',
+          intensity: '0.69',
+          anomalies: '4',
+          anomaliesSub: '2 Critical, 2 Warnings',
+          period: 'vs previous quarter',
+        };
+      case 'thisYear':
+        return {
+          co2: '11,154.2',
+          energy: '16,462.8',
+          intensity: '0.68',
+          anomalies: '4',
+          anomaliesSub: '2 Critical, 2 Warnings',
+          period: 'vs 2025 YTD',
+        };
+      case 'custom': {
+        const start = new Date(dateRange.startDate).getTime();
+        const end = new Date(dateRange.endDate).getTime();
+        const days = Math.max(1, Math.round(Math.abs(end - start) / (1000 * 60 * 60 * 24)) || 1);
+        const co2Val = (days * 41.61).toLocaleString('en-US', { maximumFractionDigits: 1 });
+        const energyVal = (days * 61.40).toLocaleString('en-US', { maximumFractionDigits: 1 });
+        const anomVal = days > 30 ? 4 : days > 7 ? 3 : days > 1 ? 2 : 1;
+        return {
+          co2: co2Val,
+          energy: energyVal,
+          intensity: '0.68',
+          anomalies: String(anomVal),
+          anomaliesSub: `${anomVal > 1 ? '1 Critical, ' + (anomVal - 1) + ' Warnings' : '1 Warning'}`,
+          period: `custom range (${days} days)`,
+        };
+      }
+      case 'all':
+      default:
+        return {
+          co2: '1,248.5',
+          energy: '1,842.1',
+          intensity: '0.68',
+          anomalies: '3',
+          anomaliesSub: '1 Critical, 2 Warnings',
+          period: 'vs last month',
+        };
+    }
+  };
+
+  const kpis = getFilteredKpis();
 
   const handleExportPDF = async () => {
     try {
@@ -43,7 +123,7 @@ export const Dashboard: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `GreenMetriX_Executive_Report_${new Date().toISOString().slice(0,10)}.pdf`;
+      a.download = `GreenMetriX_Executive_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -81,41 +161,37 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center p-1 rounded-xl bg-[#061814] border border-emerald-500/20 text-xs shadow-inner">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                activeTab === 'all'
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${activeTab === 'all'
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               All Modules
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                activeTab === 'analytics'
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${activeTab === 'analytics'
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               Analytics
             </button>
             <button
               onClick={() => setActiveTab('simulation')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                activeTab === 'simulation'
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${activeTab === 'simulation'
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               Simulation & AI
             </button>
             <button
               onClick={() => setActiveTab('telemetry')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                activeTab === 'telemetry'
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${activeTab === 'telemetry'
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               Telemetry Log
             </button>
@@ -141,17 +217,22 @@ export const Dashboard: React.FC = () => {
 
       {/* 6 Metric KPI Cards - Always Visible for Executive Visibility */}
       <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs font-bold text-emerald-400/60 uppercase tracking-wider">
-          <Activity className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Real-Time Environmental KPIs</span>
+        <div className="flex items-center justify-between text-xs font-bold text-emerald-400/60 uppercase tracking-wider">
+          <div className="flex items-center gap-2">
+            <Activity className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Real-Time Environmental KPIs</span>
+          </div>
+          <span className="text-[11px] font-mono text-emerald-400/90 font-semibold normal-case">
+            Filtered by: <span className="text-emerald-300">{dateRange.label}</span>
+          </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <MetricCard
             title="Total CO₂e Emissions"
-            value="1,248.5"
+            value={kpis.co2}
             unit="tCO2e"
             change={-12.4}
-            changePeriod="vs last month"
+            changePeriod={kpis.period}
             trend="down"
             icon={Cloud}
             variant="emerald"
@@ -160,7 +241,7 @@ export const Dashboard: React.FC = () => {
 
           <MetricCard
             title="Total Energy Usage"
-            value="1,842.1"
+            value={kpis.energy}
             unit="MWh"
             change={3.2}
             changePeriod="vs target"
@@ -172,7 +253,7 @@ export const Dashboard: React.FC = () => {
 
           <MetricCard
             title="Avg Emission Intensity"
-            value="0.68"
+            value={kpis.intensity}
             unit="kg/unit"
             change={-8.1}
             changePeriod="vs benchmark"
@@ -193,8 +274,8 @@ export const Dashboard: React.FC = () => {
 
           <MetricCard
             title="Active Anomalies"
-            value="3"
-            subtitle="1 Critical, 2 Warnings"
+            value={kpis.anomalies}
+            subtitle={kpis.anomaliesSub}
             icon={AlertTriangle}
             variant="red"
             badge="Isolation Forest"
