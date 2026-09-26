@@ -73,8 +73,8 @@ export const AICopilot: React.FC = () => {
       console.log('Copilot response received:', response);
 
       // tool_calls is an array of {tool, params?, output?, ...} objects from the backend
-      const toolCallObjects: { tool: string }[] = response.tool_calls || [];
-      const toolNames = toolCallObjects.map(t => t.tool).filter(Boolean);
+      const toolCallObjects: Array<Record<string, any>> = response.tool_calls || [];
+      const toolNames = toolCallObjects.map(t => t.tool as string).filter(Boolean);
 
       // Build reasoning steps from tool names actually used
       const reasoningFromTools: string[] = [
