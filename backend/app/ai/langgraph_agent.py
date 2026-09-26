@@ -1,8 +1,7 @@
-﻿import re
+import re
 import json
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
-from app.ai.llm_provider import get_llm_provider
 from app.ai.rag_retriever import retriever
 from app.ai.tools import (
     get_factory_summary, get_energy_trends, get_emission_trends,
@@ -12,7 +11,7 @@ from app.models.models import Factory
 
 class GreenMetriXCopilotAgent:
     def __init__(self):
-        self.llm = get_llm_provider()
+        pass
 
     def process_query(self, message: str, factory_id: Optional[int], db: Session) -> Dict[str, Any]:
         msg_lower = message.lower()
